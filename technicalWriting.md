@@ -237,7 +237,7 @@ function WatchCount() {
 }
 ```
 
-이 예제에서 setInterval 내부의 콜백 함수는 초기 count 값(0)을 계속 참조합니다. 버튼을 클릭해도 콘솔에는 항상 "Count is: 0"이 출력됩니다[1][3].
+이 예제에서 setInterval 내부의 콜백 함수는 초기 count 값(0)을 계속 참조합니다. 버튼을 클릭해도 콘솔에는 항상 "Count is: 0"이 출력됩니다.
 
 **해결 방법:**
 
