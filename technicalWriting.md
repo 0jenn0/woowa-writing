@@ -24,11 +24,11 @@
 
 ## 2. 리액트 훅과 클로저
 
-리액트 훅은 함수형 컴포넌트에서 상태 관리와 부수 효과를 처리하는 강력한 도구입니다. 이들은 내부적으로 클로저를 활용하여 효과적으로 작동합니다.
+리액트 훅은 함수형 컴포넌트에서 상태 관리와 부수 효과를 처리하는 강력한 도구입니다. 이들은 내부적으로 클로저를 활용하여 효과적으로 작동합니다. 클로저의 특성을 이해하면 훅의 동작 원리를 더 깊이 이해하고 효과적으로 활용할 수 있습니다.
 
 ### 2.1 useState와 클로저
 
-`useState` 훅은 클로저를 활용하여 컴포넌트의 상태를 관리합니다.
+useState 훅은 클로저를 활용하여 컴포넌트의 상태를 관리합니다. 이는 함수형 컴포넌트가 여러 번 호출되더라도 상태를 올바르게 유지할 수 있게 해줍니다.
 
 ```javascript
 function Counter() {
@@ -38,70 +38,116 @@ function Counter() {
     setCount((prevCount) => prevCount + 1);
   };
 
+  const incrementByTen = () => {
+    for (let i = 0; i < 10; i++) {
+      setCount((prevCount) => prevCount + 1);
+    }
+  };
+
   return (
     <div>
       <p>Count: {count}</p>
       <button onClick={increment}>Increment</button>
+      <button onClick={incrementByTen}>Increment by 10</button>
     </div>
   );
 }
 ```
 
-여기서 `setCount` 함수는 클로저를 형성하여 count 상태에 접근합니다. 이를 통해 컴포넌트가 리렌더링되어도 상태를 올바르게 유지하고 업데이트할 수 있습니다.
+이 예제에서 `setCount` 함수는 클로저를 형성하여 `count` 상태에 접근합니다. `increment` 함수에서는 단순히 `count + 1`을 사용하지 않고 `prevCount => prevCount + 1`와 같은 함수 형태를 사용합니다. 이는 클로저를 통해 최신의 상태 값을 참조할 수 있게 해줍니다.
+특히 `incrementByTen` 함수에서 이 방식의 중요성이 드러납니다. 만약 `setCount(count + 1)`을 사용했다면, 루프가 실행되는 동안 `count` 값이 변경되지 않아 결과적으로 1만 증가하게 됩니다. 하지만 클로저를 활용한 함수 형태를 사용함으로써, 각 호출마다 최신의 상태를 참조하여 정확히 10씩 증가시킬 수 있습니다.
 
 ### 2.2 useEffect에서의 클로저 활용
 
-`useEffect` 훅은 클로저를 사용하여 이전 렌더의 값을 기억하고 정리(cleanup) 함수를 구현합니다.
+`useEffect` 훅은 클로저를 사용하여 이전 렌더의 값을 기억하고 정리(cleanup) 함수를 구현합니다. 이는 비동기 작업이나 구독 관리에 특히 유용합니다.
 
 ```javascript
 function DataFetcher({ id }) {
   const [data, setData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let isCancelled = false;
+    setIsLoading(true);
+    setError(null);
 
-    fetchData(id).then((result) => {
-      if (!isCancelled) {
-        setData(result);
+    const fetchData = async () => {
+      try {
+        const result = await fetchDataFromAPI(id);
+        if (!isCancelled) {
+          setData(result);
+          setIsLoading(false);
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          setError(err.message);
+          setIsLoading(false);
+        }
       }
-    });
+    };
+
+    fetchData();
 
     return () => {
       isCancelled = true;
     };
   }, [id]);
 
-  return <div>{data ? data.name : "Loading..."}</div>;
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  return <div>{data ? data.name : "No data"}</div>;
 }
 ```
 
-이 예제에서 `useEffect`의 정리 함수는 클로저를 통해 `isCancelled` 변수에 접근합니다. 이를 통해 컴포넌트가 언마운트되거나 의존성이 변경될 때 비동기 작업을 안전하게 취소할 수 있습니다.
+이 예제에서 useEffect의 정리 함수는 클로저를 통해 isCancelled 변수에 접근합니다. 이를 통해 컴포넌트가 언마운트되거나 id가 변경될 때 비동기 작업을 안전하게 취소할 수 있습니다. 클로저를 사용함으로써 isCancelled 변수는 비동기 작업이 완료될 때까지 유지되며, 컴포넌트의 생명주기와 무관하게 정확한 상태를 반영할 수 있습니다.
+또한, setData와 setError 함수 호출 전에 isCancelled를 확인함으로써, 컴포넌트가 이미 언마운트된 후에 상태를 업데이트하는 것을 방지합니다. 이는 메모리 누수와 "Can't perform a React state update on an unmounted component" 경고를 예방하는 데 도움이 됩니다.
 
 ### 2.3 useCallback과 클로저의 상호작용
 
-`useCallback` 훅은 메모이제이션된 콜백 함수를 생성하고 의존성을 관리하는 데 클로저를 활용합니다.
+`useCallback` 훅은 메모이제이션된 콜백 함수를 생성하고 의존성을 관리하는 데 클로저를 활용합니다. 이는 불필요한 리렌더링을 방지하고 성능을 최적화하는 데 중요한 역할을 합니다.
 
 ```javascript
-function SearchComponent({ query }) {
+function SearchComponent({ query, onResultSelect }) {
   const [results, setResults] = useState([]);
+  const [searchHistory, setSearchHistory] = useState([]);
 
   const searchAPI = useCallback((searchQuery) => {
-    fetch(`/api/search?q=${searchQuery}`)
+    setSearchHistory((prev) => [...prev, searchQuery]);
+    return fetch(`/api/search?q=${searchQuery}`)
       .then((response) => response.json())
       .then((data) => setResults(data));
   }, []);
+
+  const handleResultSelect = useCallback(
+    (result) => {
+      onResultSelect(result);
+      setSearchHistory((prev) => [...prev, result.title]);
+    },
+    [onResultSelect]
+  );
 
   useEffect(() => {
     searchAPI(query);
   }, [query, searchAPI]);
 
-  return <ResultsList results={results} />;
+  return (
+    <div>
+      <ResultsList results={results} onSelect={handleResultSelect} />
+      <SearchHistory history={searchHistory} />
+    </div>
+  );
 }
 ```
 
-`useCallback`은 클로저를 사용하여 `searchAPI` 함수를 메모이제이션합니다. 이 함수는 컴포넌트가 리렌더링되어도 동일한 참조를 유지하며, 의존성 배열이 변경될 때만 새로 생성됩니다.
+이 예제에서 `useCallback`은 클로저를 사용하여 `searchAPI`와 `handleResultSelect` 함수를 메모이제이션합니다.
+`searchAPI` 함수는 빈 의존성 배열 `[]`을 가지고 있어, 컴포넌트가 리렌더링되어도 항상 동일한 함수 인스턴스를 반환합니다. 이 함수는 클로저를 통해 `setSearchHistory`와 `setResults`에 접근하여 상태를 업데이트합니다.
 
-이러한 방식으로 리액트 훅은 클로저를 활용하여 상태 관리, 부수 효과 처리, 그리고 성능 최적화를 효과적으로 수행합니다.
+`handleResultSelect` 함수는 `onResultSelect` prop을 의존성으로 가집니다. 이 함수는 클로저를 통해 `onResultSelect` prop과 `setSearchHistory` 함수에 접근합니다. `onResultSelect` prop이 변경될 때만 새로운 함수 인스턴스가 생성되므로, 불필요한 리렌더링을 방지할 수 있습니다.
+
+이러한 방식으로 `useCallback`과 클로저를 함께 사용하면, 컴포넌트의 성능을 최적화하면서도 필요한 상태와 props에 안전하게 접근할 수 있습니다. 특히 자식 컴포넌트에 콜백을 prop으로 전달할 때 유용하며, `React.memo`와 함께 사용하면 더욱 효과적인 최적화를 달성할 수 있습니다.
+
+이처럼 리액트 훅은 클로저를 활용하여 상태 관리, 부수 효과 처리, 그리고 성능 최적화를 효과적으로 수행합니다. 클로저의 특성을 잘 이해하고 활용함으로써, 더 안정적이고 효율적인 리액트 애플리케이션을 개발할 수 있습니다.
 
 ## 3. 클로저를 활용한 상태 관리
 
