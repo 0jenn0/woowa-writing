@@ -100,8 +100,8 @@ function DataFetcher({ id }) {
 }
 ```
 
-이 예제에서 useEffect의 정리 함수는 클로저를 통해 isCancelled 변수에 접근합니다. 이를 통해 컴포넌트가 언마운트되거나 id가 변경될 때 비동기 작업을 안전하게 취소할 수 있습니다. 클로저를 사용함으로써 isCancelled 변수는 비동기 작업이 완료될 때까지 유지되며, 컴포넌트의 생명주기와 무관하게 정확한 상태를 반영할 수 있습니다.
-또한, setData와 setError 함수 호출 전에 isCancelled를 확인함으로써, 컴포넌트가 이미 언마운트된 후에 상태를 업데이트하는 것을 방지합니다. 이는 메모리 누수와 "Can't perform a React state update on an unmounted component" 경고를 예방하는 데 도움이 됩니다.
+이 예제에서 `useEffect`의 정리 함수는 클로저를 통해 `isCancelled` 변수에 접근합니다. 이를 통해 컴포넌트가 언마운트되거나 `id`가 변경될 때 비동기 작업을 안전하게 취소할 수 있습니다. 클로저를 사용함으로써 `isCancelled` 변수는 비동기 작업이 완료될 때까지 유지되며, 컴포넌트의 생명주기와 무관하게 정확한 상태를 반영할 수 있습니다.
+또한, `setData`와 `setError` 함수 호출 전에 `isCancelled`를 확인함으로써, 컴포넌트가 이미 언마운트된 후에 상태를 업데이트하는 것을 방지합니다. 이는 메모리 누수와 "Can't perform a React state update on an unmounted component" 경고를 예방하는 데 도움이 됩니다.
 
 ### 2.3 useCallback과 클로저의 상호작용
 
@@ -151,11 +151,11 @@ function SearchComponent({ query, onResultSelect }) {
 
 ## 3. 클로저를 활용한 상태 관리
 
-클로저는 리액트에서 복잡한 상태 로직을 캡슐화하고 비동기 상황에서도 안전하게 상태를 관리할 수 있게 해주는 강력한 도구입니다.
+클로저는 리액트에서 복잡한 상태 로직을 캡슐화하고 비동기 상황에서도 안전하게 상태를 관리할 수 있게 해주는 강력한 도구입니다. 클로저의 특성을 이해하고 활용함으로써, 더 안정적이고 유지보수가 용이한 리액트 애플리케이션을 개발할 수 있습니다.
 
 ### 3.1 함수형 업데이트와 클로저
 
-함수형 업데이트는 이전 상태를 안전하게 참조하여 업데이트하는 방법입니다. 클로저를 활용하여 구현됩니다.
+함수형 업데이트는 이전 상태를 안전하게 참조하여 업데이트하는 방법입니다. 클로저를 활용하여 구현되며, 특히 비동기 상황이나 여러 상태 업데이트가 연속적으로 일어나는 경우에 유용합니다.
 
 ```javascript
 function Counter() {
@@ -171,21 +171,30 @@ function Counter() {
     }, 1000);
   };
 
+  const incrementMultiple = () => {
+    setCount((prevCount) => prevCount + 1);
+    setCount((prevCount) => prevCount + 1);
+    setCount((prevCount) => prevCount + 1);
+  };
+
   return (
     <div>
       <p>Count: {count}</p>
       <button onClick={increment}>Increment</button>
       <button onClick={incrementAsync}>Increment Async</button>
+      <button onClick={incrementMultiple}>Increment by 3</button>
     </div>
   );
 }
 ```
 
-여기서 `setCount`에 전달된 함수는 클로저를 형성하여 항상 최신의 count 값을 참조합니다. 이는 비동기 상황에서도 안전하게 상태를 업데이트할 수 있게 해줍니다.
+이 예제에서 `increment` 함수는 기본적인 함수형 업데이트를 보여줍니다. `incrementAsync` 함수는 비동기 상황에서도 클로저를 통해 최신 상태를 참조할 수 있음을 보여줍니다. `incrementMultiple` 함수는 연속적인 상태 업데이트에서 클로저의 중요성을 보여줍니다. 각 `setCount` 호출은 이전 상태를 기반으로 새로운 상태를 계산하므로, 결과적으로 카운트가 3 증가합니다.
+
+함수형 업데이트를 사용하지 않고 `setCount(count + 1)`을 사용했다면, `incrementMultiple` 함수에서 카운트가 1만 증가했을 것입니다. 클로저를 활용한 함수형 업데이트는 이러한 문제를 해결하고 예측 가능한 상태 업데이트를 가능하게 합니다.
 
 ### 3.2 클로저를 이용한 비동기 상태 관리
 
-클로저는 비동기 작업에서 최신 상태를 올바르게 참조하는 데 유용합니다.
+클로저는 비동기 작업에서 최신 상태를 올바르게 참조하는 데 유용합니다. 특히 `useRef`와 함께 사용하면 비동기 콜백에서도 항상 최신 상태를 참조할 수 있습니다.
 
 ```javascript
 function AsyncCounter() {
@@ -202,57 +211,82 @@ function AsyncCounter() {
     }, 1000);
   };
 
+  const incrementAsyncMultiple = () => {
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => {
+        setCount((prevCount) => prevCount + 1);
+      }, 1000 * (i + 1));
+    }
+  };
+
   return (
     <div>
       <p>Count: {count}</p>
       <button onClick={incrementAsync}>Increment Async</button>
+      <button onClick={incrementAsyncMultiple}>Increment Async Multiple</button>
     </div>
   );
 }
 ```
 
-이 예제에서 `countRef`는 클로저를 통해 항상 최신의 `count` 값을 참조합니다. 이를 통해 비동기 작업에서도 올바른 상태 값을 사용할 수 있습니다.
+이 예제에서 `countRef`는 클로저를 통해 항상 최신의 `count` 값을 참조합니다. `incrementAsync` 함수는 countRef를 사용하여 비동기 작업에서도 최신 상태를 참조합니다. `incrementAsyncMultiple` 함수는 함수형 업데이트를 사용하여 여러 비동기 업데이트를 올바르게 처리합니다.
+이러한 방식으로 클로저를 활용하면, 복잡한 비동기 상황에서도 상태를 안전하게 관리할 수 있습니다.
 
 ### 3.3 커스텀 훅에서의 클로저 활용
 
-클로저를 활용하여 상태 로직을 재사용 가능한 형태로 추상화할 수 있습니다.
+클로저를 활용하여 상태 로직을 재사용 가능한 형태로 추상화할 수 있습니다. 커스텀 훅을 만들어 여러 컴포넌트에서 동일한 상태 로직을 재사용할 수 있습니다.
 
 ```javascript
-function useCounter(initialCount = 0) {
+function useCounter(initialCount = 0, step = 1) {
   const [count, setCount] = useState(initialCount);
 
   const increment = useCallback(() => {
-    setCount((prevCount) => prevCount + 1);
-  }, []);
+    setCount((prevCount) => prevCount + step);
+  }, [step]);
 
   const decrement = useCallback(() => {
-    setCount((prevCount) => prevCount - 1);
-  }, []);
+    setCount((prevCount) => prevCount - step);
+  }, [step]);
 
   const reset = useCallback(() => {
     setCount(initialCount);
   }, [initialCount]);
 
-  return { count, increment, decrement, reset };
+  const setCountWithLimit = useCallback((newCount) => {
+    setCount((prevCount) => {
+      const limitedCount = Math.max(0, Math.min(newCount, 100));
+      return limitedCount;
+    });
+  }, []);
+
+  return { count, increment, decrement, reset, setCountWithLimit };
 }
 
 function CounterComponent() {
-  const { count, increment, decrement, reset } = useCounter(0);
+  const { count, increment, decrement, reset, setCountWithLimit } = useCounter(
+    0,
+    2
+  );
 
   return (
     <div>
       <p>Count: {count}</p>
-      <button onClick={increment}>+</button>
-      <button onClick={decrement}>-</button>
+      <button onClick={increment}>+2</button>
+      <button onClick={decrement}>-2</button>
       <button onClick={reset}>Reset</button>
+      <button onClick={() => setCountWithLimit(count + 10)}>
+        +10 (with limit)
+      </button>
     </div>
   );
 }
 ```
 
-이 커스텀 훅에서 `increment`, `decrement`, `reset` 함수들은 클로저를 통해 `count` 상태에 접근합니다. 이를 통해 상태 로직을 캡슐화하고 여러 컴포넌트에서 재사용할 수 있습니다.
+이 커스텀 훅에서 `increment`, `decrement`, `reset`, `setCountWithLimit` 함수들은 클로저를 통해 `count` 상태에 접근합니다.
+`useCallback`을 사용하여 함수들을 메모이제이션하고, 의존성 배열을 통해 필요할 때만 새로운 함수 인스턴스를 생성합니다. `setCountWithLimit` 함수는 클로저를 활용하여 상태 업데이트 로직을 캡슐화하고, 0에서 100 사이의 값으로 제한합니다.
 
-클로저를 활용한 상태 관리는 리액트 애플리케이션에서 복잡한 상태 로직을 효과적으로 다룰 수 있게 해주며, 특히 비동기 상황에서 안전하고 예측 가능한 상태 업데이트를 가능하게 합니다.
+이러한 방식으로 클로저를 활용하면 상태 로직을 효과적으로 추상화하고 재사용할 수 있으며, 컴포넌트의 로직을 더 깔끔하게 유지할 수 있습니다.
+클로저를 활용한 상태 관리는 리액트 애플리케이션에서 복잡한 상태 로직을 효과적으로 다룰 수 있게 해주며, 특히 비동기 상황에서 안전하고 예측 가능한 상태 업데이트를 가능하게 합니다. 또한, 재사용 가능한 로직을 만들어 코드의 중복을 줄이고 유지보수성을 향상시킬 수 있습니다.
 
 ## 4. 클로저 관련 흔한 실수와 해결 방법
 
